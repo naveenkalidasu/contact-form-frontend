@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div id="messages"></div>
+        <div class="user-count">Active Users: <span id="userCount">0</span></div>
+        <form id="messageForm">
+            <input id="messageInput" autocomplete="off" placeholder="Type a message..." required>
+            <button>Send</button>
+        </form>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const username = "<%= username %>";
+        socket.emit('join', username);
+
+        const messages = document.getElementById('messages');
+        const userCount = document.getElementById('userCount');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+
+        socket.on('chatMessage', ({ msg, username }) => {
+            const item = document.createElement('div');
+            item.textContent = `${username}: ${msg}`;
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        socket.on('userJoined', (username) => {
+            const item = document.createElement('div');
+            item.textContent = `${username} has joined the chat.`;
+            messages.appendChild(item);
+        });
+
+        socket.on('userLeft', (username) => {
+            const item = document.createElement('div');
+            item.textContent = `${username} has left the chat.`;
+            messages.appendChild(item);
+        });
+
+        socket.on('updateUser Count', (count) => {
+            userCount.textContent = count;
+        });
+
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            socket.emit('chatMessage', messageInput.value);
+            messageInput.value = '';
+        });
+    </script>
+</body>
+</html>
