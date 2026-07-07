@@ -1,59 +1,471 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Room</title>
-    <link rel="stylesheet" href="/style.css">
-</head>
-<body>
-    <div class="chat-container">
-        <div id="messages"></div>
-        <div class="user-count">Active Users: <span id="userCount">0</span></div>
-        <form id="messageForm">
-            <input id="messageInput" autocomplete="off" placeholder="Type a message..." required>
-            <button>Send</button>
-        </form>
-    </div>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const username = "<%= username %>";
-        socket.emit('join', username);
+/* styles.css - Complete Beautiful Version for Chat App */
 
-        const messages = document.getElementById('messages');
-        const userCount = document.getElementById('userCount');
-        const messageForm = document.getElementById('messageForm');
-        const messageInput = document.getElementById('messageInput');
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-        socket.on('chatMessage', ({ msg, username }) => {
-            const item = document.createElement('div');
-            item.textContent = `${username}: ${msg}`;
-            messages.appendChild(item);
-            window.scrollTo(0, document.body.scrollHeight);
-        });
+/* Reset & Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        socket.on('userJoined', (username) => {
-            const item = document.createElement('div');
-            item.textContent = `${username} has joined the chat.`;
-            messages.appendChild(item);
-        });
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    margin: 0;
+}
 
-        socket.on('userLeft', (username) => {
-            const item = document.createElement('div');
-            item.textContent = `${username} has left the chat.`;
-            messages.appendChild(item);
-        });
+/* Chat Container */
+.chat-container {
+    width: 100%;
+    max-width: 550px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 30px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    animation: fadeInUp 0.8s ease;
+    position: relative;
+    overflow: hidden;
+}
 
-        socket.on('updateUser Count', (count) => {
-            userCount.textContent = count;
-        });
+/* Animated Gradient Border */
+.chat-container::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c);
+    background-size: 400% 400%;
+    border-radius: 26px;
+    z-index: -1;
+    animation: gradientBorder 3s ease infinite;
+}
 
-        messageForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            socket.emit('chatMessage', messageInput.value);
-            messageInput.value = '';
-        });
-    </script>
-</body>
-</html>
+@keyframes gradientBorder {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.chat-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+}
+
+/* Chat Header - Optional */
+.chat-container::after {
+    content: '💬 Live Chat';
+    display: block;
+    text-align: center;
+    color: #667eea;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
+/* Messages Container */
+#messages {
+    height: 400px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 16px;
+    border: 2px solid #e9ecef;
+    transition: border-color 0.3s ease;
+    scroll-behavior: smooth;
+}
+
+#messages:focus-within {
+    border-color: #667eea;
+}
+
+/* Custom Scrollbar for Webkit */
+#messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+#messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#messages::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
+#messages::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+/* Firefox Scrollbar */
+#messages {
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+}
+
+/* Message Styling */
+#messages div {
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    animation: slideIn 0.3s ease;
+    word-wrap: break-word;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+#messages div:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-15px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+/* User Message Styling */
+#messages div:not(:last-child) {
+    border-bottom: 1px solid #f1f3f5;
+}
+
+#messages div:last-child {
+    border-bottom: none;
+}
+
+/* Join/Leave System Messages */
+#messages div:contains('has joined the chat'),
+#messages div:contains('has left the chat') {
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    text-align: center;
+    font-style: italic;
+    color: #555;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 8px rgba(252, 182, 159, 0.3);
+}
+
+/* Username in Messages */
+#messages div::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #667eea;
+    margin-right: 10px;
+    vertical-align: middle;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+    100% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* User Count */
+.user-count {
+    margin: 12px 0 15px 0;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 50px;
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.user-count:hover {
+    transform: scale(1.02);
+}
+
+.user-count span {
+    font-weight: 700;
+    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 12px;
+    border-radius: 30px;
+    margin-left: 5px;
+}
+
+/* Form */
+#messageForm {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+/* Input Field */
+#messageInput {
+    flex: 1;
+    padding: 14px 20px;
+    border: 2px solid #e9ecef;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+    color: #333;
+}
+
+#messageInput:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 5px rgba(102, 126, 234, 0.15);
+    transform: scale(1.01);
+}
+
+#messageInput::placeholder {
+    color: #adb5bd;
+    font-weight: 400;
+}
+
+/* Send Button */
+#messageForm button {
+    padding: 14px 32px;
+    border: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+#messageForm button::before {
+    content: '→';
+    margin-right: 8px;
+    font-size: 1.2rem;
+}
+
+#messageForm button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.5);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+#messageForm button:active {
+    transform: translateY(0px);
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+}
+
+/* Ripple Effect on Button */
+#messageForm button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+#messageForm button:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* Empty State */
+#messages:empty::before {
+    content: "💬 No messages yet. Say hello!";
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #adb5bd;
+    font-style: italic;
+    font-size: 1.1rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Typing Indicator - Optional */
+.typing-indicator {
+    display: none;
+    padding: 8px 16px;
+    color: #667eea;
+    font-size: 0.9rem;
+    font-style: italic;
+    animation: pulse 1.5s infinite;
+}
+
+/* Online Status Badge */
+.online-badge {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4caf50;
+    margin-right: 8px;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+    .chat-container {
+        padding: 20px;
+        border-radius: 18px;
+        max-width: 100%;
+        margin: 10px;
+    }
+    
+    #messages {
+        height: 350px;
+        padding: 12px;
+    }
+    
+    #messageInput {
+        font-size: 0.9rem;
+        padding: 12px 16px;
+    }
+    
+    #messageForm button {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+    
+    #messageForm button::before {
+        content: '';
+        margin-right: 0;
+    }
+    
+    .user-count {
+        font-size: 0.85rem;
+        padding: 8px 16px;
+    }
+    
+    .chat-container::after {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .chat-container {
+        padding: 12px;
+        border-radius: 14px;
+    }
+    
+    #messages {
+        height: 250px;
+        padding: 10px;
+    }
+    
+    #messageInput {
+        font-size: 0.8rem;
+        padding: 10px 12px;
+    }
+    
+    #messageForm button {
+        padding: 10px 16px;
+        font-size: 0.8rem;
+    }
+    
+    #messages div {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+    }
+    
+    .user-count {
+        font-size: 0.75rem;
+        padding: 6px 12px;
+    }
+}
+
+/* Dark Mode Support - Optional */
+@media (prefers-color-scheme: dark) {
+    .chat-container {
+        background: rgba(30, 30, 46, 0.95);
+    }
+    
+    #messages {
+        background: #1a1a2e;
+        border-color: #2d2d44;
+    }
+    
+    #messages div {
+        background: #24243a;
+        color: #e0e0e0;
+        border-color: #2d2d44;
+    }
+    
+    #messages div:not(:last-child) {
+        border-bottom-color: #2d2d44;
+    }
+    
+    #messages div:contains('has joined'),
+    #messages div:contains('has left') {
+        background: linear-gradient(135deg, #2d2d44 0%, #1a1a2e 100%);
+        color: #b0b0b0;
+    }
+    
+    #messageInput {
+        background: #1a1a2e;
+        color: #e0e0e0;
+        border-color: #2d2d44;
+    }
+    
+    #messageInput::placeholder {
+        color: #6c6c8a;
+    }
+    
+    .user-count {
+        background: linear-gradient(135deg, #4a4a6a 0%, #3d3d5c 100%);
+    }
+    
+    #messages::-webkit-scrollbar-track {
+        background: #1a1a2e;
+    }
+}
