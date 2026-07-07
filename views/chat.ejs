@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <div id="chatView" class="glass-card">
+    <div class="glass-card">
         <div class="chat-header">
             <h2><i class="fas fa-comment"></i> Chat</h2>
             <div class="user-badge">
@@ -23,23 +23,22 @@
 
         <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
             <div class="user-count">
-                <i class="fas fa-users"></i> <span id="userCount">1</span> online
+                <i class="fas fa-users"></i> <span id="userCount">0</span> online
             </div>
         </div>
 
-        <div id="messages">
-            <!-- Messages will be rendered here -->
-        </div>
+        <div id="messages"></div>
 
-        <form id="messageForm" class="chat-form" action="/send" method="POST">
-            <input type="hidden" name="username" value="<%= username %>">
-            <input type="text" id="messageInput" name="message" placeholder="Type a message..." autocomplete="off" required>
+        <form id="messageForm" class="chat-form">
+            <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
             <button type="submit" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
         </form>
     </div>
 
+    <!-- Socket.IO Client -->
+    <script src="/socket.io/socket.io.js"></script>
+    
     <script>
-        // Client-side functionality
         (function() {
             const username = '<%= username %>';
             const messagesDiv = document.getElementById('messages');
@@ -48,6 +47,9 @@
             const userCountSpan = document.getElementById('userCount');
             const logoutLink = document.getElementById('logoutLink');
 
+            // Connect to Socket.IO
+            const socket = io();
+
             // Function to add a message to the UI
             function addMessageToUI(message) {
                 const div = document.createElement('div');
@@ -55,9 +57,9 @@
                 
                 if (message.system) {
                     div.classList.add('system');
-                    div.innerHTML = `<i class="fas fa-info-circle"></i> ${message.text}`;
+                    div.innerHTML = `<i class="fas fa-info-circle"></i> ${escapeHtml(message.text)}`;
                 } else {
-                    const time = message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+                    const time = new Date(message.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                     div.innerHTML = `<strong>${escapeHtml(message.username)}</strong> ${escapeHtml(message.text)} <span class="timestamp">${time}</span>`;
                 }
                 
@@ -77,82 +79,66 @@
                 return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
             }
 
+            // Receive message history
+            socket.on('messageHistory', (history) => {
+                history.forEach(msg => addMessageToUI(msg));
+            });
+
+            // Join the chat
+            socket.emit('join', username);
+
+            // Handle incoming messages
+            socket.on('chatMessage', (data) => {
+                addMessageToUI(data);
+            });
+
+            // Handle user joined
+            socket.on('userJoined', (user) => {
+                addMessageToUI({
+                    system: true,
+                    text: `${escapeHtml(user)} has joined the chat`,
+                    timestamp: Date.now()
+                });
+            });
+
+            // Handle user left
+            socket.on('userLeft', (user) => {
+                if (user) {
+                    addMessageToUI({
+                        system: true,
+                        text: `${escapeHtml(user)} has left the chat`,
+                        timestamp: Date.now()
+                    });
+                }
+            });
+
+            // Update user count
+            socket.on('updateUserCount', (count) => {
+                userCountSpan.textContent = count;
+            });
+
             // Handle form submission
             messageForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const text = messageInput.value.trim();
                 if (!text) return;
 
-                // Send message via fetch
-                fetch('/send', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        message: text
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        messageInput.value = '';
-                        messageInput.focus();
-                        // Add message to UI immediately
-                        addMessageToUI({
-                            username: username,
-                            text: text,
-                            timestamp: Date.now()
-                        });
-                    }
-                })
-                .catch(error => console.error('Error sending message:', error));
+                // Send message via Socket.IO
+                socket.emit('chatMessage', text);
+                messageInput.value = '';
+                messageInput.focus();
             });
 
             // Handle logout
             logoutLink.addEventListener('click', function(e) {
                 e.preventDefault();
-                fetch('/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(() => {
-                    window.location.href = '/';
-                })
-                .catch(error => console.error('Error logging out:', error));
+                socket.disconnect();
+                window.location.href = '/';
             });
-
-            // Poll for new messages
-            function pollMessages() {
-                fetch('/messages')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.messages && data.messages.length > 0) {
-                            // Clear existing messages
-                            messagesDiv.innerHTML = '';
-                            // Add all messages
-                            data.messages.forEach(msg => {
-                                addMessageToUI(msg);
-                            });
-                        }
-                        if (data.userCount) {
-                            userCountSpan.textContent = data.userCount;
-                        }
-                    })
-                    .catch(error => console.error('Error polling messages:', error));
-            }
-
-            // Initial load
-            pollMessages();
-            
-            // Poll every 2 seconds
-            setInterval(pollMessages, 2000);
 
             // Focus input on load
             messageInput.focus();
+
         })();
     </script>
 </body>
